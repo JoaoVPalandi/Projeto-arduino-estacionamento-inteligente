@@ -10,11 +10,8 @@
   - LED Verde                           -> Pino Digital 5 (resistor 220 ohms)
   - LED Amarelo                         -> Pino Digital 6 (resistor 220 ohms)
   - LED Vermelho                        -> Pino Digital 7 (resistor 220 ohms)
-  - Micro Servo (Cancela)               -> Pino Digital 11
   - GND comum                           -> Pino GND do Arduino
 */
-
-#include <Servo.h>
 
 // Definição dos pinos em português
 const int pinoGatilho = 9;
@@ -23,12 +20,9 @@ const int pinoAlarmeSonoro = 8;
 const int pinoLedVerde = 5;
 const int pinoLedAmarelo = 6;
 const int pinoLedVermelho = 7;
-const int pinoServoCancela = 11;
 
-// Objetos e variáveis globais
-Servo motorCancela;
+// Variáveis globais
 unsigned long tempoUltimoEnvioSerial = 0;
-bool cancelaAberta = false;
 float ultimaDistanciaValida = 68.0;
 
 // Liga o buzzer com segurança (funciona tanto para buzzer ativo quanto passivo)
@@ -43,14 +37,6 @@ void desligarBuzzer() {
   digitalWrite(pinoAlarmeSonoro, LOW);
 }
 
-// Move a cancela suavemente e desliga o sinal para evitar ruído e sobreaquecimento
-void acionarCancela(int angulo) {
-  motorCancela.attach(pinoServoCancela);
-  motorCancela.write(angulo);
-  delay(300);
-  motorCancela.detach();
-}
-
 void setup() {
   Serial.begin(9600);
 
@@ -63,9 +49,6 @@ void setup() {
 
   // Inicializa o buzzer desligado
   desligarBuzzer();
-
-  // Posiciona a cancela fechada (0 graus)
-  acionarCancela(0);
 
   // Pisca os 3 LEDs no início para confirmar inicialização
   digitalWrite(pinoLedVerde, HIGH);
@@ -151,13 +134,7 @@ void processarComandosRemotos() {
     String comando = Serial.readStringUntil('\n');
     comando.trim();
 
-    if (comando.startsWith("C:ABRIR")) {
-      acionarCancela(90);
-      cancelaAberta = true;
-    } else if (comando.startsWith("C:FECHAR")) {
-      acionarCancela(0);
-      cancelaAberta = false;
-    } else if (comando.startsWith("B:TESTE")) {
+    if (comando.startsWith("B:TESTE")) {
       ligarBuzzer(2000);
       delay(200);
       desligarBuzzer();

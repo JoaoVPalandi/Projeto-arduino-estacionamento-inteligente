@@ -7,7 +7,7 @@
 ---
 
 ## 1. Escopo e Matriz de Requisitos (Etapa 1)
-O projeto resolve a dificuldade de visibilidade ao manobrar em vagas apertadas através de medição física contínua de distância com avisos progressivos (bipes e LEDs) e telemetria transmitida em rede local via MQTT/HTTP para um painel web com controle de atuadores.
+O projeto resolve a dificuldade de visibilidade ao manobrar em vagas apertadas através de medição física contínua de distância com avisos progressivos (bipes e LEDs) e telemetria transmitida em rede local via MQTT/HTTP para um painel web com controle e teste de atuadores.
 
 * **Requisitos Funcionais (RF):**
   - **RF01:** Medir distância em centímetros (2 a 400 cm) via sensor ultrassônico HC-SR04.
@@ -15,7 +15,7 @@ O projeto resolve a dificuldade de visibilidade ao manobrar em vagas apertadas a
   - **RF03:** Sinalizar status com 3 LEDs (Verde >100cm, Amarelo 50-100cm, Vermelho <50cm).
   - **RF04:** Enviar telemetria via Serial e MQTT (`estacionamento/vaga01/distancia`).
   - **RF05:** Dashboard Web em tempo real exibindo centímetros, nível e histórico.
-  - **RF06:** Emitir comandos remotos aos atuadores (abrir/fechar cancela e testar buzzer).
+  - **RF06:** Emitir comando remoto ao atuador (teste no buzzer).
 * **Requisitos Não Funcionais (RNF):**
   - **RNF01:** Tempo de resposta físico inferior a 50ms (sem delays bloqueantes).
   - **RNF02:** Operar de forma autônoma via Hotspot Wi-Fi da Raspberry Pi 3B.
@@ -35,7 +35,6 @@ O projeto resolve a dificuldade de visibilidade ao manobrar em vagas apertadas a
 | **LED Verde** | Ânodo (+) | **Digital 5** | Resistor 220 $\Omega$ / Longe (> 100 cm) |
 | **LED Amarelo**| Ânodo (+) | **Digital 6** | Resistor 220 $\Omega$ / Atenção (50 a 100 cm) |
 | **LED Vermelho**| Ânodo (+) | **Digital 7** | Resistor 220 $\Omega$ / Muito Perto (< 50 cm) |
-| **Micro Servo**| Sinal | **Digital 11** | Cancela do estacionamento (0° a 90°) |
 
 ---
 
@@ -53,7 +52,7 @@ O projeto resolve a dificuldade de visibilidade ao manobrar em vagas apertadas a
 ### Instalação na Raspberry Pi:
 ```bash
 sudo apt update && sudo apt install -y mosquitto mosquitto-clients python3-pip
-pip install paho-mqtt pyserial flask
+pip install paho-mqtt pyserial fastapi uvicorn
 ```
 
 ---
@@ -68,21 +67,20 @@ O arquivo [`schema.sql`](schema.sql) implementa os scripts normalizados:
 
 ## 5. Rotas da API REST (Etapa 5)
 
-* `GET /api/vaga/status`: Retorna a distância atual, níveis, LEDs e estado da cancela.
+* `GET /api/vaga/status`: Retorna a distância atual, níveis, LEDs e estado do sensor.
 * `POST /api/leituras`: Recebe payload `{"distancia_cm": 68.0}` e persiste no banco.
 * `GET /api/leituras/historico`: Retorna as últimas 8 medições.
-* `POST /api/atuadores/comando`: Recebe `{"atuador": "cancela", "acao": "ABRIR"}` e aciona o servo.
+* `POST /api/atuadores/comando`: Recebe `{"atuador": "buzzer", "acao": "TESTE"}` e aciona o alarme sonoro.
 
 ---
 
 ## 6. Como Rodar e Demonstrar
 
-1. **Gravar no Arduino:** Abra `arduino.ino` na Arduino IDE e carregue na placa.
+1. **Gravar no Arduino:** Abra `arduino.ino` e carregue na placa.
 2. **Conectar na Raspberry Pi:** Plugue o cabo USB do Arduino em qualquer porta USB da Raspberry Pi (ou PC).
 3. **Iniciar a Aplicação:**
    ```bash
    python app.py
    ```
    *(Acesse no navegador: `http://127.0.0.1:5000`)*.
-4. **Teste Prático:** Aproxime a mão do sensor HC-SR04: os centímetros cairão ao vivo na tela, o buzzer apitará mais rápido, os LEDs alternarão e você poderá clicar em *"Abrir Cancela"* e *"Testar Buzzer"*.
-
+4. **Teste Prático:** Aproxime a mão do sensor HC-SR04: os centímetros cairão ao vivo na tela, o buzzer apitará mais rápido, os LEDs alternarão e você poderá clicar em *"Testar Buzzer"*.

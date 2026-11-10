@@ -7,7 +7,6 @@ let contextoAudio = null;
 let temporizadorBipe = null;
 let intervaloAtual = null;
 let temporizadorSimulacao = null;
-let statusCancela = 'FECHADA';
 
 // Emite um bipe sonoro sintetizado pelo navegador
 function emitirBipe(frequencia, duracao = 0.08) {
@@ -86,13 +85,6 @@ function atualizarPainel() {
       const elAlerta = document.getElementById('alertaTexto');
       if (elAlerta) elAlerta.textContent = dadosRecebidos.descricao_alerta;
 
-      // Atualiza o estado da cancela remota
-      statusCancela = dadosRecebidos.cancela_status || 'FECHADA';
-      const elCancelaTxt = document.getElementById('cancelaTxt');
-      if (elCancelaTxt) elCancelaTxt.textContent = statusCancela;
-      const elBtnCancela = document.getElementById('btnCancela');
-      if (elBtnCancela) elBtnCancela.className = (statusCancela === 'ABERTA') ? 'btn btn-azul' : 'btn btn-cinza';
-
       // Atualiza a barra visual de proximidade
       const barraProximidade = document.getElementById('barraPreenchimento');
       if (barraProximidade) {
@@ -156,7 +148,7 @@ function enviarLeituraManual(distanciaCentimetros) {
   }).then(atualizarPainel).catch(() => {});
 }
 
-// Envia comando para os atuadores remotos (Cancela ou Buzzer)
+// Envia comando para os atuadores remotos (Buzzer)
 function enviarComandoAtuador(atuador, acao) {
   fetch('/api/atuadores/comando', {
     method: 'POST',
@@ -209,16 +201,13 @@ window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btnEntrar')?.addEventListener('click', () => executarSimulacao([150, 110, 85, 68, 40, 15]));
   document.getElementById('btnSair')?.addEventListener('click', () => executarSimulacao([15, 45, 68, 95, 130, 175]));
 
-  // Controles dos atuadores remotos
-  document.getElementById('btnCancela')?.addEventListener('click', () => {
-    enviarComandoAtuador('cancela', statusCancela === 'ABERTA' ? 'FECHAR' : 'ABRIR');
-  });
+  // Controle remoto do Buzzer
   document.getElementById('btnBuzzerRemoto')?.addEventListener('click', () => {
     enviarComandoAtuador('buzzer', 'TESTE');
     emitirBipe(2000, 0.4);
   });
 
-  // Botão para ligar e desligar o som
+  // Botão para ligar e desligar o som do navegador
   const botaoAlarmeSonoro = document.getElementById('btnAudio');
   if (botaoAlarmeSonoro) {
     botaoAlarmeSonoro.onclick = () => {

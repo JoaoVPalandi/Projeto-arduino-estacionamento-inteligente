@@ -26,8 +26,8 @@ CREATE TABLE IF NOT EXISTS leituras (
 
 CREATE TABLE IF NOT EXISTS logs_atuadores (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    atuador TEXT NOT NULL,       -- 'cancela', 'buzzer', 'leds'
-    acao TEXT NOT NULL,          -- 'ABERTO', 'FECHADO', 'TESTE', 'BIPE'
+    atuador TEXT NOT NULL,       -- 'buzzer', 'leds'
+    acao TEXT NOT NULL,          -- 'TESTE', 'BIPE', 'SISTEMA_INICIADO'
     origem TEXT NOT NULL,        -- 'MANUAL_WEB', 'AUTOMATICO_SENSOR'
     detalhes TEXT,
     data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -41,5 +41,4 @@ INSERT OR IGNORE INTO leituras (vaga_codigo, distancia_cm, nivel_alerta, descric
 VALUES ('VAGA-01', 68.0, 'Atenção', 'Bipes moderados', 'Ativo');
 
 INSERT OR IGNORE INTO logs_atuadores (atuador, acao, origem, detalhes)
-VALUES ('cancela', 'FECHADO', 'SISTEMA', 'Inicialização padrão da cancela');
-
+VALUES ('buzzer', 'SISTEMA_INICIADO', 'SISTEMA', 'Inicialização padrão do alarme sonoro');

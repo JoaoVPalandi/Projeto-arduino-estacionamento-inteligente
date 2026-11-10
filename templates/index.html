@@ -17,7 +17,7 @@
         <p class="subtitulo">Sistema de auxílio para estacionar com sensor de distância e aviso sonoro</p>
       </div>
       <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-        <a href="/docs" target="_blank" class="btn btn-cinza" style="text-decoration: none; padding: 8px 12px; font-size: 0.85rem;">📘 Swagger (/docs)</a>
+        <a href="/docs" target="_blank" class="btn btn-cinza" style="text-decoration: none; padding: 8px 12px; font-size: 0.85rem;">📘 API (/docs)</a>
         <button id="btnAudio" class="btn btn-audio">🔇 Som de Bipes: <strong>Desligado</strong></button>
       </div>
     </header>
@@ -83,11 +83,10 @@
 
     <!-- Comandos Remotos aos Atuadores -->
     <div class="card card-vaga">
-      <h2>Comandos Remotos aos Atuadores (IoT)</h2>
+      <h2>Comando Remoto ao Atuador Sonoro (IoT)</h2>
       <div class="painel-testes" style="border: none; margin-top: 6px; padding-top: 0;">
-        <button id="btnCancela" class="btn btn-cinza">🚧 Cancela: <strong id="cancelaTxt">FECHADA</strong></button>
         <button id="btnBuzzerRemoto" class="btn btn-cinza">🔔 Testar Buzzer Remoto</button>
-        <span style="font-size: 12px; color: #64748b; margin-left: 10px;">Envia comandos para o Micro Servo e Buzzer do Arduino</span>
+        <span style="font-size: 12px; color: #64748b; margin-left: 10px;">Dispara um bipe de teste de 2000Hz no Buzzer físico do Arduino via Serial</span>
       </div>
     </div>
 

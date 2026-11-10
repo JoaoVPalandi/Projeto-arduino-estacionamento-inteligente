@@ -8,7 +8,7 @@ import sqlite3, os, webbrowser, threading, time, json, uvicorn
 
 app = FastAPI(
     title="Estacionamento Inteligente IoT - SENAI",
-    description="API REST para monitoramento de vaga com sensor HC-SR04, LEDs, buzzer e cancela servo.",
+    description="API REST para monitoramento de vaga com sensor HC-SR04, LEDs e alarme sonoro buzzer.",
     version="1.0.0", docs_url="/docs", redoc_url="/redoc"
 )
 
@@ -27,8 +27,8 @@ class DadosLeitura(BaseModel):
     distancia: Optional[float] = None
 
 class DadosComandoAtuador(BaseModel):
-    atuador: str = 'cancela'
-    acao: str = 'ABRIR'
+    atuador: str = 'buzzer'
+    acao: str = 'TESTE'
 
 def conectar_banco():
     conexao = sqlite3.connect(CAMINHO_BANCO_DADOS)
@@ -45,7 +45,7 @@ def iniciar_banco():
         if conexao.execute('SELECT COUNT(*) FROM leituras').fetchone()[0] == 0:
             conexao.execute("INSERT INTO leituras (vaga_codigo, distancia_cm, nivel_alerta, descricao_alerta, sensor_status) VALUES ('VAGA-01', 68.0, 'Atenção', 'Bipes moderados', 'Ativo')")
         if conexao.execute('SELECT COUNT(*) FROM logs_atuadores').fetchone()[0] == 0:
-            conexao.execute("INSERT INTO logs_atuadores (atuador, acao, origem) VALUES ('cancela', 'FECHADA', 'SISTEMA')")
+            conexao.execute("INSERT INTO logs_atuadores (atuador, acao, origem) VALUES ('buzzer', 'SISTEMA_INICIADO', 'SISTEMA')")
 
 def classificar_distancia(distancia):
     if distancia is None or distancia < 0 or distancia > 400:
@@ -112,14 +112,12 @@ def pagina_inicial():
 
 @app.get('/api/vaga/status', summary="Status da Vaga em Tempo Real", tags=["Vaga"])
 def obter_status_vaga():
-    """Retorna dados ao vivo: distância, alertas, LEDs e status da cancela."""
+    """Retorna dados ao vivo: distância, alertas, LEDs e status do sensor."""
     with conectar_banco() as conexao:
         leitura = conexao.execute("SELECT * FROM leituras ORDER BY id DESC LIMIT 1").fetchone()
-        cancela = conexao.execute("SELECT acao FROM logs_atuadores WHERE atuador='cancela' ORDER BY id DESC LIMIT 1").fetchone()
 
     distancia = leitura['distancia_cm'] if leitura else 68.0
     info = classificar_distancia(distancia)
-    status_cancela = cancela['acao'] if cancela else 'FECHADA'
 
     return {
         'vaga_codigo': 'VAGA-01',
@@ -130,8 +128,6 @@ def obter_status_vaga():
         'status_sensor': info['sensor'],
         'led': info['led'],
         'cor': info['cor'],
-        'cancela_status': status_cancela,
-        'status_cancela': status_cancela,
         'data_hora': leitura['data_hora'] if leitura else '--:--'
     }
 
@@ -166,7 +162,7 @@ def obter_historico_leituras():
 # Suporta POST (envio de comando) e GET (consulta sem erro 405)
 @app.post('/api/atuadores/comando', summary="Enviar Comando ao Atuador", tags=["Atuadores"])
 def executar_comando_atuador(dados: DadosComandoAtuador):
-    """Envia comandos para a cancela (servo) ou alarme sonoro (buzzer)."""
+    """Envia comandos para o alarme sonoro (buzzer)."""
     registrar_comando_atuador(dados.atuador, dados.acao, 'WEB')
     return {'sucesso': True, 'atuador': dados.atuador, 'acao': dados.acao}
 

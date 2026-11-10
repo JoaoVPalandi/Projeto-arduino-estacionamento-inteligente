@@ -1,4 +1,4 @@
-# DOSSIÊ TÉCNICO • PROJETO INTEGRADOR IoT (ITCOI)
+# DOCUMENTAÇÃO TÉCNICA • PROJETO INTEGRADOR IoT (ITCOI)
 
 **ESCOLA E FACULDADE SENAI "CONDE JOSÉ VICENTE DE AZEVEDO"**  
 **Curso Técnico em Desenvolvimento de Sistemas | Novo Ensino Médio (SESI-SENAI)**  
@@ -20,7 +20,7 @@ Estacionar em garagens apertadas e docas de carga traz alto risco de colisões p
 * **RF03 – Sinalização Visual Local:** Três LEDs devem refletir a zona de risco: Verde (Seguro), Amarelo (Atenção) e Vermelho (Crítico).
 * **RF04 – Comunicação Serial & MQTT:** O microcontrolador deve enviar dados via Serial USB e publicar no Broker MQTT no tópico `estacionamento/vaga01/distancia`.
 * **RF05 – Painel Web em Tempo Real:** Exibir a distância em tempo real em centímetros, estado do sensor, alertas sonoros e histórico.
-* **RF06 – Comando Remoto aos Atuadores (Item 4.5):** A interface web deve permitir abrir/fechar a cancela física (Micro Servo) e disparar bipes de teste no buzzer.
+* **RF06 – Comando Remoto aos Atuadores:** A interface web deve permitir disparar bipes de teste no buzzer físico via Serial.
 
 ### 1.3. Requisitos Não Funcionais (RNF)
 * **RNF01 – Baixa Latência:** Resposta física no microcontrolador em menos de 50ms (lógica assíncrona com `millis()`, sem `delay()` bloqueante).
@@ -44,7 +44,6 @@ Estacionar em garagens apertadas e docas de carga traz alto risco de colisões p
 | **LED Verde** | Ânodo (+) | **Digital 5** | Resistor 220 $\Omega$ / Zona Segura (> 100 cm) |
 | **LED Amarelo**| Ânodo (+) | **Digital 6** | Resistor 220 $\Omega$ / Atenção (50 a 100 cm) |
 | **LED Vermelho**| Ânodo (+) | **Digital 7** | Resistor 220 $\Omega$ / Zona Crítica (< 50 cm) |
-| **Micro Servo**| Sinal | **Digital 11** | Controle angular da cancela (0° fechada, 90° aberta) |
 
 ### 2.2. Lógica Matemática do Sensor:
 $$\text{distância (cm)} = \frac{\text{tempo de eco (µs)} \times 0.0343}{2}$$
@@ -64,7 +63,7 @@ $$\text{distância (cm)} = \frac{\text{tempo de eco (µs)} \times 0.0343}{2}$$
 
 ### Configuração no Raspberry Pi OS:
 ```bash
-sudo apt update && sudo apt install -y mosquitto mosquitto-clients
+sudo apt update && sudo apt install -y mosquitto mosquitto-clients python3-pip
 pip install paho-mqtt pyserial fastapi uvicorn
 ```
 
@@ -98,11 +97,11 @@ pip install paho-mqtt pyserial fastapi uvicorn
 
 ---
 
-## 5. ETAPA 5 • Especificação das Rotas REST (API Flask)
+## 5. ETAPA 5 • Especificação das Rotas REST (API FastAPI)
 
 | Método | Endpoint | Entrada (JSON) | Resposta | Finalidade |
 | :---: | :--- | :--- | :--- | :--- |
-| `GET` | `/api/vaga/status` | - | `200 OK` (JSON) | Telemetria ao vivo e status da cancela |
+| `GET` | `/api/vaga/status` | - | `200 OK` (JSON) | Telemetria ao vivo e alertas da vaga |
 | `POST`| `/api/leituras` | `{"distancia_cm": 68.0}` | `201 Created` | Registra medição do sensor |
 | `GET` | `/api/leituras/historico` | - | `200 OK` (Array) | Histórico recente para a tabela |
-| `POST`| `/api/atuadores/comando` | `{"atuador":"cancela","acao":"ABRIR"}` | `200 OK` | Comando remoto para o Micro Servo/Buzzer |
+| `POST`| `/api/atuadores/comando` | `{"atuador":"buzzer","acao":"TESTE"}` | `200 OK` | Comando remoto para teste sonoro do buzzer |
