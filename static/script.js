@@ -1,5 +1,6 @@
 // =======================================================
 // ESTACIONAMENTO INTELIGENTE • JAVASCRIPT EM PORTUGUÊS
+// Versão Compacta / Bancada (Escala Máxima: 80 cm)
 // =======================================================
 
 let somLigado = false;
@@ -36,17 +37,17 @@ function emitirBipe(frequencia, duracao = 0.08) {
   }
 }
 
-// Controla o intervalo e o ritmo dos bipes conforme a distância medida
+// Controla o intervalo e o ritmo dos bipes conforme a distância medida (Escala máx 80 cm)
 function controlarRitmoBipes(distanciaCentimetros) {
-  if (!somLigado || distanciaCentimetros == null || distanciaCentimetros <= 0 || distanciaCentimetros > 200) {
+  if (!somLigado || distanciaCentimetros == null || distanciaCentimetros <= 0 || distanciaCentimetros > 80) {
     if (temporizadorBipe) clearInterval(temporizadorBipe);
     temporizadorBipe = null;
     intervaloAtual = null;
     return;
   }
 
-  let tempoIntervalo = distanciaCentimetros < 15 ? 120 : (distanciaCentimetros < 50 ? 200 : (distanciaCentimetros <= 100 ? 450 : 800));
-  let frequenciaSom = distanciaCentimetros < 15 ? 2400 : (distanciaCentimetros < 50 ? 2200 : (distanciaCentimetros <= 100 ? 1900 : 1600));
+  let tempoIntervalo = distanciaCentimetros < 8 ? 90 : (distanciaCentimetros < 20 ? 200 : (distanciaCentimetros <= 50 ? 450 : 850));
+  let frequenciaSom = distanciaCentimetros < 8 ? 2400 : (distanciaCentimetros < 20 ? 2200 : (distanciaCentimetros <= 50 ? 1900 : 1600));
 
   if (intervaloAtual === tempoIntervalo && temporizadorBipe) return;
 
@@ -85,10 +86,11 @@ function atualizarPainel() {
       const elAlerta = document.getElementById('alertaTexto');
       if (elAlerta) elAlerta.textContent = dadosRecebidos.descricao_alerta;
 
-      // Atualiza a barra visual de proximidade
+      // Atualiza a barra visual de proximidade (proporcional a 80 cm)
       const barraProximidade = document.getElementById('barraPreenchimento');
       if (barraProximidade) {
-        barraProximidade.style.width = Math.max(5, Math.min(100, ((200 - distancia) / 200) * 100)) + '%';
+        const percentual = Math.max(5, Math.min(100, ((80 - distancia) / 80) * 100));
+        barraProximidade.style.width = percentual + '%';
         barraProximidade.style.backgroundColor = corAlerta;
       }
 
@@ -101,19 +103,17 @@ function atualizarPainel() {
       if (dadosRecebidos.led === 'Amarelo') document.getElementById('ledAmarelo')?.classList.add('led-amarelo-ativo');
       if (dadosRecebidos.led === 'Vermelho') document.getElementById('ledVermelho')?.classList.add('led-vermelho-ativo');
 
-      // Atualiza a posição do carrinho na vaga
+      // Atualiza a posição do carrinho na vaga (escala de 80 cm até 5 cm)
       const elCarro = document.getElementById('carroVirtual');
       if (elCarro) {
-        const posicaoCarro = Math.max(10, Math.min(78, 78 - ((distancia - 15) / 165) * 65));
+        const posicaoCarro = Math.max(10, Math.min(78, 78 - ((distancia - 5) / 75) * 65));
         elCarro.style.left = posicaoCarro + '%';
       }
 
       // Atualiza o ritmo dos bipes sonoros
       controlarRitmoBipes(distancia);
     })
-    .catch(() => {
-      // Ignora falhas temporárias se o servidor estiver reiniciando
-    });
+    .catch(() => {});
 
   // 2. Busca o histórico de medições para preencher a tabela
   fetch('/api/leituras/historico')
@@ -187,19 +187,19 @@ window.addEventListener('DOMContentLoaded', () => {
     };
   }
 
-  // Botões de teste e simulação
+  // Botões de teste e simulação (Escala de 80 cm)
   document.getElementById('btnAplicarSlider')?.addEventListener('click', () => {
     if (controleDeslizante) enviarLeituraManual(controleDeslizante.value);
   });
-  document.getElementById('btn68')?.addEventListener('click', () => {
+  document.getElementById('btn35')?.addEventListener('click', () => {
     if (controleDeslizante) {
-      controleDeslizante.value = 68;
+      controleDeslizante.value = 35;
       controleDeslizante.oninput();
     }
-    enviarLeituraManual(68);
+    enviarLeituraManual(35);
   });
-  document.getElementById('btnEntrar')?.addEventListener('click', () => executarSimulacao([150, 110, 85, 68, 40, 15]));
-  document.getElementById('btnSair')?.addEventListener('click', () => executarSimulacao([15, 45, 68, 95, 130, 175]));
+  document.getElementById('btnEntrar')?.addEventListener('click', () => executarSimulacao([75, 55, 40, 25, 15, 6]));
+  document.getElementById('btnSair')?.addEventListener('click', () => executarSimulacao([6, 18, 32, 48, 65, 78]));
 
   // Controle remoto do Buzzer
   document.getElementById('btnBuzzerRemoto')?.addEventListener('click', () => {

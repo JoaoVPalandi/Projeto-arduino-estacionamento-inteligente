@@ -3,7 +3,7 @@ import json
 import urllib.request
 import urllib.error
 
-# Endereço da API REST local
+# Endereço da API REST local (Versão Minimalista - Máx 80 cm)
 ENDERECO_API = "http://127.0.0.1:5000/api/leituras"
 
 def enviar_distancia(distancia_centimetros):
@@ -35,9 +35,9 @@ def enviar_distancia(distancia_centimetros):
         return False
 
 def simular_entrada_vaga():
-    """Simula um veículo se aproximando da parede da vaga."""
-    print("\n--- SIMULANDO ENTRADA NA VAGA (VEÍCULO APROXIMANDO) ---")
-    passos_aproximacao = [160, 130, 95, 75, 68, 45, 25, 14]
+    """Simula um veículo se aproximando da maquete (escala de 80 cm)."""
+    print("\n--- SIMULANDO ENTRADA NA VAGA (VEÍCULO APROXIMANDO - MÁX 80 CM) ---")
+    passos_aproximacao = [78, 65, 48, 35, 22, 14, 6]
     for distancia in passos_aproximacao:
         if not enviar_distancia(distancia):
             break
@@ -45,9 +45,9 @@ def simular_entrada_vaga():
     print("Simulação de entrada concluída!\n")
 
 def simular_saida_vaga():
-    """Simula o veículo saindo da vaga."""
+    """Simula o veículo saindo da maquete."""
     print("\n--- SIMULANDO SAÍDA DA VAGA (VEÍCULO AFASTANDO) ---")
-    passos_afastamento = [14, 30, 55, 80, 110, 145, 180]
+    passos_afastamento = [6, 15, 28, 42, 58, 75]
     for distancia in passos_afastamento:
         if not enviar_distancia(distancia):
             break
@@ -58,12 +58,12 @@ def menu_simulador():
     """Menu interativo para teste de bancada via terminal."""
     while True:
         print("=" * 48)
-        print("   SIMULADOR DE VAGA IoT - SENAI")
+        print("   SIMULADOR DE VAGA IoT - SENAI (MÁX 80 CM)")
         print("   API Alvo: http://127.0.0.1:5000/api/leituras")
         print("=" * 48)
         print("1 - Simular carro estacionando (Entrada)")
         print("2 - Simular carro saindo da vaga (Saída)")
-        print("3 - Enviar uma distância manual (ex: 68)")
+        print("3 - Enviar uma distância manual (ex: 35)")
         print("0 - Sair")
 
         opcao = input("\nEscolha uma opção: ").strip()
@@ -73,7 +73,7 @@ def menu_simulador():
         elif opcao == '2':
             simular_saida_vaga()
         elif opcao == '3':
-            valor = input("Digite a distância em cm (ex: 68): ").strip()
+            valor = input("Digite a distância em cm (ex: 35): ").strip()
             try:
                 enviar_distancia(float(valor))
             except ValueError:

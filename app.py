@@ -8,7 +8,7 @@ import sqlite3, os, webbrowser, threading, time, json, uvicorn
 
 app = FastAPI(
     title="Estacionamento Inteligente IoT - SENAI",
-    description="API REST para monitoramento de vaga com sensor HC-SR04, LEDs e alarme sonoro buzzer.",
+    description="API REST para monitoramento de vaga com sensor HC-SR04, LEDs e alarme sonoro buzzer (Escala Maquete/Bancada Máx 80 cm).",
     version="1.0.0", docs_url="/docs", redoc_url="/redoc"
 )
 
@@ -43,18 +43,24 @@ def iniciar_banco():
             CREATE TABLE IF NOT EXISTS logs_atuadores (id INTEGER PRIMARY KEY AUTOINCREMENT, atuador TEXT, acao TEXT, origem TEXT, data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
         ''')
         if conexao.execute('SELECT COUNT(*) FROM leituras').fetchone()[0] == 0:
-            conexao.execute("INSERT INTO leituras (vaga_codigo, distancia_cm, nivel_alerta, descricao_alerta, sensor_status) VALUES ('VAGA-01', 68.0, 'Atenção', 'Bipes moderados', 'Ativo')")
+            conexao.execute("INSERT INTO leituras (vaga_codigo, distancia_cm, nivel_alerta, descricao_alerta, sensor_status) VALUES ('VAGA-01', 35.0, 'Atenção', 'Bipes moderados', 'Ativo')")
         if conexao.execute('SELECT COUNT(*) FROM logs_atuadores').fetchone()[0] == 0:
             conexao.execute("INSERT INTO logs_atuadores (atuador, acao, origem) VALUES ('buzzer', 'SISTEMA_INICIADO', 'SISTEMA')")
 
 def classificar_distancia(distancia):
-    if distancia is None or distancia < 0 or distancia > 400:
-        return {'nivel': 'Falha', 'descricao': 'Leitura Inválida', 'sensor': 'Falha', 'led': 'Nenhum', 'cor': '#ef4444'}
-    if distancia > 100:
+    """Escala compacta para maquete/bancada (máx 80 cm):
+       - > 50 cm: Longe (Verde, bipes lentos)
+       - 20 a 50 cm: Atenção (Amarelo, bipes moderados)
+       - < 20 cm: Muito Perto (Vermelho, bipes rápidos)
+       - <= 8 cm: Crítico / Parada de Emergência (Vermelho, bipe contínuo)
+    """
+    if distancia is None or distancia < 0 or distancia > 80:
+        return {'nivel': 'Fora de Alcance', 'descricao': 'Sem veículo próximo (> 80 cm)', 'sensor': 'Ativo', 'led': 'Nenhum', 'cor': '#94a3b8'}
+    if distancia > 50:
         return {'nivel': 'Longe', 'descricao': 'Bipes lentos', 'sensor': 'Ativo', 'led': 'Verde', 'cor': '#22c55e'}
-    if distancia >= 50:
+    if distancia >= 20:
         return {'nivel': 'Atenção', 'descricao': 'Bipes moderados', 'sensor': 'Ativo', 'led': 'Amarelo', 'cor': '#eab308'}
-    descricao = 'Bipe contínuo' if distancia <= 15 else 'Bipes rápidos'
+    descricao = 'Bipe contínuo (Emergência)' if distancia <= 8 else 'Bipes rápidos'
     return {'nivel': 'Muito Perto', 'descricao': descricao, 'sensor': 'Ativo', 'led': 'Vermelho', 'cor': '#ef4444'}
 
 def salvar_leitura(codigo_vaga, distancia):
@@ -92,7 +98,7 @@ def monitorar_leitura_arduino():
                         if linha:
                             try:
                                 v = float(json.loads(linha).get('distancia_cm', linha))
-                                if v >= 0: salvar_leitura('VAGA-01', v)
+                                if 0 <= v <= 80: salvar_leitura('VAGA-01', v)
                             except (ValueError, json.JSONDecodeError): pass
                         time.sleep(0.04)
             except Exception:
@@ -116,7 +122,7 @@ def obter_status_vaga():
     with conectar_banco() as conexao:
         leitura = conexao.execute("SELECT * FROM leituras ORDER BY id DESC LIMIT 1").fetchone()
 
-    distancia = leitura['distancia_cm'] if leitura else 68.0
+    distancia = leitura['distancia_cm'] if leitura else 35.0
     info = classificar_distancia(distancia)
 
     return {
@@ -179,7 +185,7 @@ def abrir_navegador_automatico():
 
 if __name__ == '__main__':
     iniciar_banco()
-    print("=" * 65 + "\n   ESTACIONAMENTO IoT - SENAI (FastAPI + Swagger)\n   Painel Web:   http://127.0.0.1:5000\n   Docs Swagger: http://127.0.0.1:5000/docs\n" + "=" * 65)
+    print("=" * 65 + "\n   ESTACIONAMENTO IoT - SENAI (Escala Bancada Máx 80 cm)\n   Painel Web:   http://127.0.0.1:5000\n   Docs Swagger: http://127.0.0.1:5000/docs\n" + "=" * 65)
     threading.Thread(target=monitorar_leitura_arduino, daemon=True).start()
     threading.Thread(target=abrir_navegador_automatico, daemon=True).start()
     uvicorn.run(app, host='0.0.0.0', port=5000)
