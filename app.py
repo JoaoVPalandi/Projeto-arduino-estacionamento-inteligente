@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
-import sqlite3, os, webbrowser, threading, time, json, uvicorn
+import sqlite3, os, webbrowser, threading, time, json, uvicorn, socket
 
 app = FastAPI(
     title="Estacionamento Inteligente IoT - SENAI",
@@ -179,13 +179,37 @@ def consultar_comandos_atuadores():
         linhas = conexao.execute("SELECT * FROM logs_atuadores ORDER BY id DESC LIMIT 10").fetchall()
     return {'logs_atuadores': [dict(r) for r in linhas]}
 
+def obter_ip_local():
+    """Descobre o IP real da máquina na rede local."""
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(('8.8.8.8', 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return '127.0.0.1'
+
 def abrir_navegador_automatico():
     time.sleep(1.5)
-    webbrowser.open('http://127.0.0.1:5000')
+    # Abre o navegador local caso tenha interface gráfica disponível
+    try:
+        webbrowser.open('http://127.0.0.1:5000')
+    except Exception:
+        pass
 
 if __name__ == '__main__':
     iniciar_banco()
-    print("=" * 65 + "\n   ESTACIONAMENTO IoT - SENAI (Escala Bancada Máx 80 cm)\n   Painel Web:   http://127.0.0.1:5000\n   Docs Swagger: http://127.0.0.1:5000/docs\n" + "=" * 65)
+    ip_rede = obter_ip_local()
+    
+    print("=" * 65)
+    print("   ESTACIONAMENTO IoT - SENAI (Escala Bancada Máx 80 cm)")
+    print(f"   Acesse pelo seu Computador/Celular:")
+    print(f"   👉 http://{ip_rede}:5000")
+    print(f"   👉 http://rpi06.local:5000")
+    print(f"   Docs Swagger: http://{ip_rede}:5000/docs")
+    print("=" * 65)
+    
     threading.Thread(target=monitorar_leitura_arduino, daemon=True).start()
     threading.Thread(target=abrir_navegador_automatico, daemon=True).start()
     uvicorn.run(app, host='0.0.0.0', port=5000)

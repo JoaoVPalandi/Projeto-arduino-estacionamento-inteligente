@@ -1,15 +1,34 @@
-// =======================================================
-// ESTACIONAMENTO INTELIGENTE • JAVASCRIPT EM PORTUGUÊS
-// Versão Compacta / Bancada (Escala Máxima: 80 cm)
-// =======================================================
+// ==============================================================================
+// PROJETO INTEGRADOR IoT - SENAI "CONDE JOSÉ VICENTE DE AZEVEDO"
+// Estacionamento Inteligente • Script do Frontend (JavaScript)
+// ==============================================================================
+//
+// COMO O FRONTEND SE CONECTA AO BACKEND?
+// ------------------------------------------------------------------------------
+// 1. O navegador carrega o HTML/CSS/JS a partir do servidor FastAPI (`GET /`).
+// 2. A comunicação contínua acontece via requisições HTTP assíncronas usando a
+//    função nativa `fetch()` do JavaScript.
+// 3. A cada 350ms, a função `atualizarPainel()` chama o endpoint:
+//       GET /api/vaga/status
+//    O backend responde com um JSON contendo a distância atual, cor, LED e alerta.
+// 4. O JavaScript processa esse JSON e atualiza os elementos do DOM (HTML) sem
+//    recarregar a página (comportamento Single Page Application - SPA).
+// 5. Ao clicar no botão "Testar Buzzer" ou mover o slider, o JS envia:
+//       POST /api/atuadores/comando  ou  POST /api/leituras
+// ==============================================================================
 
+// Variáveis globais de controle de áudio e temporizadores
 let somLigado = false;
 let contextoAudio = null;
 let temporizadorBipe = null;
 let intervaloAtual = null;
 let temporizadorSimulacao = null;
 
-// Emite um bipe sonoro sintetizado pelo navegador
+// ==============================================================================
+// BLOCO 1: SÍNTESE DE ÁUDIO NO NAVEGADOR (Web Audio API)
+// ==============================================================================
+// Gera um som senoidal (bipe) no próprio alto-falante do computador/celular,
+// sincronizado com o ritmo do buzzer físico do Arduino.
 function emitirBipe(frequencia, duracao = 0.08) {
   if (!somLigado) return;
 
@@ -33,11 +52,11 @@ function emitirBipe(frequencia, duracao = 0.08) {
     oscilador.start();
     oscilador.stop(contextoAudio.currentTime + duracao);
   } catch (erro) {
-    console.log("Aguardando interação de áudio:", erro);
+    console.log("Aguardando interação do usuário para áudio:", erro);
   }
 }
 
-// Controla o intervalo e o ritmo dos bipes conforme a distância medida (Escala máx 80 cm)
+// Controla o intervalo de repetição dos bipes baseado na proximidade (< 80 cm)
 function controlarRitmoBipes(distanciaCentimetros) {
   if (!somLigado || distanciaCentimetros == null || distanciaCentimetros <= 0 || distanciaCentimetros > 80) {
     if (temporizadorBipe) clearInterval(temporizadorBipe);
@@ -46,6 +65,7 @@ function controlarRitmoBipes(distanciaCentimetros) {
     return;
   }
 
+  // Define a velocidade do bipe: quanto mais perto (< 8 cm), mais rápido
   let tempoIntervalo = distanciaCentimetros < 8 ? 90 : (distanciaCentimetros < 20 ? 200 : (distanciaCentimetros <= 50 ? 450 : 850));
   let frequenciaSom = distanciaCentimetros < 8 ? 2400 : (distanciaCentimetros < 20 ? 2200 : (distanciaCentimetros <= 50 ? 1900 : 1600));
 
@@ -56,37 +76,46 @@ function controlarRitmoBipes(distanciaCentimetros) {
   temporizadorBipe = setInterval(() => emitirBipe(frequenciaSom), tempoIntervalo);
 }
 
-// Atualiza todas as informações da tela com os dados mais recentes da API
+// ==============================================================================
+// BLOCO 2: CONEXÃO COM O BACKEND (Polling GET /api/vaga/status)
+// ==============================================================================
+// Esta é a função principal de integração: ela busca os dados no FastAPI
+// e atualiza dinamicamente os valores visuais na tela (HTML).
 function atualizarPainel() {
-  // 1. Busca os dados ao vivo da vaga
+  // 1. REQUISIÇÃO HTTP GET: Pergunta ao servidor o estado ao vivo da vaga
   fetch('/api/vaga/status')
     .then(resposta => {
-      if (!resposta.ok) throw new Error('Status ' + resposta.status);
-      return resposta.json();
+      if (!resposta.ok) throw new Error('Status HTTP ' + resposta.status);
+      return resposta.json(); // Converte o texto JSON em objeto JavaScript
     })
     .then(dadosRecebidos => {
+      // Extrai os campos devolvidos pelo backend
       const distancia = dadosRecebidos.distancia_cm ?? 0;
       const nivel = dadosRecebidos.nivel_alerta || 'Atenção';
       const corAlerta = dadosRecebidos.cor || '#eab308';
 
-      // Atualiza textos principais
+      // Atualiza o texto da distância em cm e a cor
       const elDistancia = document.getElementById('distanciaValor');
       if (elDistancia) {
         elDistancia.textContent = distancia;
         elDistancia.style.color = corAlerta;
       }
+
+      // Atualiza a descrição do nível ("Nível de longe", "Nível de atenção", etc.)
       const elNivel = document.getElementById('distanciaNivel');
       if (elNivel) {
         elNivel.textContent = 'Nível de ' + nivel.toLowerCase();
         elNivel.style.color = corAlerta;
       }
+
+      // Atualiza status do sensor e do alarme sonoro
       const elSensor = document.getElementById('sensorStatus');
       if (elSensor) elSensor.textContent = dadosRecebidos.sensor_status;
 
       const elAlerta = document.getElementById('alertaTexto');
       if (elAlerta) elAlerta.textContent = dadosRecebidos.descricao_alerta;
 
-      // Atualiza a barra visual de proximidade (proporcional a 80 cm)
+      // Atualiza a largura e cor da barra de proximidade proporcional a 80 cm
       const barraProximidade = document.getElementById('barraPreenchimento');
       if (barraProximidade) {
         const percentual = Math.max(5, Math.min(100, ((80 - distancia) / 80) * 100));
@@ -94,7 +123,7 @@ function atualizarPainel() {
         barraProximidade.style.backgroundColor = corAlerta;
       }
 
-      // Atualiza os LEDs virtuais
+      // Atualiza os LEDs virtuais da interface (Verde, Amarelo ou Vermelho)
       ['ledVerde', 'ledAmarelo', 'ledVermelho'].forEach(idLed => {
         const led = document.getElementById(idLed);
         if (led) led.className = 'led-bolinha';
@@ -103,19 +132,21 @@ function atualizarPainel() {
       if (dadosRecebidos.led === 'Amarelo') document.getElementById('ledAmarelo')?.classList.add('led-amarelo-ativo');
       if (dadosRecebidos.led === 'Vermelho') document.getElementById('ledVermelho')?.classList.add('led-vermelho-ativo');
 
-      // Atualiza a posição do carrinho na vaga (escala de 80 cm até 5 cm)
+      // Movimenta o carrinho animado pela vaga conforme a distância medida
       const elCarro = document.getElementById('carroVirtual');
       if (elCarro) {
         const posicaoCarro = Math.max(10, Math.min(78, 78 - ((distancia - 5) / 75) * 65));
         elCarro.style.left = posicaoCarro + '%';
       }
 
-      // Atualiza o ritmo dos bipes sonoros
+      // Mantém o ritmo sonoro do navegador sincronizado
       controlarRitmoBipes(distancia);
     })
-    .catch(() => {});
+    .catch(() => {
+      // Ignora falhas momentâneas se o servidor estiver ocupado
+    });
 
-  // 2. Busca o histórico de medições para preencher a tabela
+  // 2. REQUISIÇÃO HTTP GET: Busca as últimas 8 leituras gravadas no SQLite
   fetch('/api/leituras/historico')
     .then(resposta => {
       if (!resposta.ok) throw new Error('Status ' + resposta.status);
@@ -130,6 +161,7 @@ function atualizarPainel() {
         return;
       }
 
+      // Monta as linhas <tr> da tabela dinamicamente com os dados do banco
       tabelaCorpo.innerHTML = dadosHistorico.historico.map(registro => {
         const classeTag = registro.nivel_alerta === 'Longe' ? 'tag-verde' : (registro.nivel_alerta === 'Muito Perto' ? 'tag-vermelho' : 'tag-amarelo');
         const horario = registro.data_hora ? (registro.data_hora.includes(' ') ? registro.data_hora.split(' ')[1] : registro.data_hora) : '--:--';
@@ -139,7 +171,11 @@ function atualizarPainel() {
     .catch(() => {});
 }
 
-// Envia uma nova leitura manual para a API
+// ==============================================================================
+// BLOCO 3: ENVIAR DADOS DO FRONTEND PARA O BACKEND (POST HTTP)
+// ==============================================================================
+
+// Envia uma nova medição manual (ex: quando o usuário mexe no slider)
 function enviarLeituraManual(distanciaCentimetros) {
   fetch('/api/leituras', {
     method: 'POST',
@@ -148,7 +184,7 @@ function enviarLeituraManual(distanciaCentimetros) {
   }).then(atualizarPainel).catch(() => {});
 }
 
-// Envia comando para os atuadores remotos (Buzzer)
+// Envia comando para acionar o Buzzer físico através do backend e porta serial
 function enviarComandoAtuador(atuador, acao) {
   fetch('/api/atuadores/comando', {
     method: 'POST',
@@ -157,7 +193,7 @@ function enviarComandoAtuador(atuador, acao) {
   }).then(atualizarPainel).catch(() => {});
 }
 
-// Executa simulações de manobra em passos sucessivos
+// Simula a animação do carro estacionando passo a passo
 function executarSimulacao(passosDistancia) {
   if (temporizadorSimulacao) clearInterval(temporizadorSimulacao);
   let indicePasso = 0;
@@ -177,7 +213,9 @@ function executarSimulacao(passosDistancia) {
   }, 600);
 }
 
-// Configuração dos eventos quando a página é carregada
+// ==============================================================================
+// BLOCO 4: INICIALIZAÇÃO E EVENTOS DO NAVEGADOR
+// ==============================================================================
 window.addEventListener('DOMContentLoaded', () => {
   const controleDeslizante = document.getElementById('sliderDistancia');
   if (controleDeslizante) {
@@ -187,7 +225,7 @@ window.addEventListener('DOMContentLoaded', () => {
     };
   }
 
-  // Botões de teste e simulação (Escala de 80 cm)
+  // Botões de teste e manobra
   document.getElementById('btnAplicarSlider')?.addEventListener('click', () => {
     if (controleDeslizante) enviarLeituraManual(controleDeslizante.value);
   });
@@ -201,13 +239,13 @@ window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btnEntrar')?.addEventListener('click', () => executarSimulacao([75, 55, 40, 25, 15, 6]));
   document.getElementById('btnSair')?.addEventListener('click', () => executarSimulacao([6, 18, 32, 48, 65, 78]));
 
-  // Controle remoto do Buzzer
+  // Disparo do comando remoto do Buzzer
   document.getElementById('btnBuzzerRemoto')?.addEventListener('click', () => {
     enviarComandoAtuador('buzzer', 'TESTE');
     emitirBipe(2000, 0.4);
   });
 
-  // Botão para ligar e desligar o som do navegador
+  // Botão de ligar/desligar o áudio do navegador
   const botaoAlarmeSonoro = document.getElementById('btnAudio');
   if (botaoAlarmeSonoro) {
     botaoAlarmeSonoro.onclick = () => {
@@ -219,7 +257,8 @@ window.addEventListener('DOMContentLoaded', () => {
     };
   }
 
-  // Atualização inicial e periódica a cada 350 milissegundos
+  // Loop de sincronização periódica:
+  // Executa uma vez no início e depois a cada 350 milissegundos continuamente
   atualizarPainel();
   setInterval(atualizarPainel, 350);
 });

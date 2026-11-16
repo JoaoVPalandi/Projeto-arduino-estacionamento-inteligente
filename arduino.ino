@@ -1,6 +1,6 @@
 /*
   PROJETO INTEGRADOR IoT - SENAI "CONDE JOSÉ VICENTE DE AZEVEDO"
-  Estacionamento Inteligente • Vaga 01 (Versão Bancada Minimalista: Máx 80 cm)
+  Estacionamento Inteligente • Vaga 01 (Versão Bancada: Máx 80 cm)
   Autores: João Pradela, João Palandi e Pedro Cesar
 
   Pinagem no Arduino Uno R3:
@@ -23,7 +23,7 @@ const int pinoLedVermelho = 7;
 
 // Variáveis globais
 unsigned long tempoUltimoEnvioSerial = 0;
-float ultimaDistanciaValida = 45.0;
+float distanciaAtual = 60.0; // Inicializa em zona livre
 
 // Liga o buzzer com segurança (funciona tanto para buzzer ativo quanto passivo)
 void ligarBuzzer(int frequenciaTom) {
@@ -50,11 +50,11 @@ void setup() {
   // Inicializa o buzzer desligado
   desligarBuzzer();
 
-  // Pisca os 3 LEDs no início para confirmar inicialização
+  // Pisca os 3 LEDs no início para confirmar funcionamento elétrico
   digitalWrite(pinoLedVerde, HIGH);
   digitalWrite(pinoLedAmarelo, HIGH);
   digitalWrite(pinoLedVermelho, HIGH);
-  delay(300);
+  delay(400);
   digitalWrite(pinoLedVerde, LOW);
   digitalWrite(pinoLedAmarelo, LOW);
   digitalWrite(pinoLedVermelho, LOW);
@@ -62,8 +62,8 @@ void setup() {
   Serial.println(F("{\"status\":\"pronto\",\"sistema\":\"Estacionamento IoT SENAI\"}"));
 }
 
-// Mede a distância em centímetros através do sensor ultrassônico HC-SR04
-// Otimizado para maquete/bancada: timeout de 6000 microssegundos (~1 metro máx)
+// Mede a distância em centímetros através do sensor HC-SR04
+// Timeout ajustado para 15000 microssegundos (~2,5 metros) para não perder eco
 float medirDistancia() {
   digitalWrite(pinoGatilho, LOW);
   delayMicroseconds(2);
@@ -71,66 +71,71 @@ float medirDistancia() {
   delayMicroseconds(10);
   digitalWrite(pinoGatilho, LOW);
 
-  // Timeout de 6000 microssegundos para resposta rápida de bancada
-  long duracao = pulseIn(pinoEco, HIGH, 6000);
-  if (duracao <= 0) return -1.0;
+  long duracao = pulseIn(pinoEco, HIGH, 15000);
+  if (duracao <= 0) {
+    return 100.0; // Sem eco ou desaproximou: livre (> 80 cm)
+  }
 
   float distanciaCalculada = (duracao * 0.0343) / 2.0;
-  if (distanciaCalculada < 2.0 || distanciaCalculada > 80.0) return -1.0;
+  if (distanciaCalculada < 2.0) return 2.0;
 
   return distanciaCalculada;
 }
 
-// Controla os 3 LEDs visuais de acordo com a distância (Escala compacta máx 80 cm)
-// Verde: > 50 cm | Amarelo: 20 a 50 cm | Vermelho: < 20 cm
-void controlarLeds(float distanciaCentimetros) {
-  if (distanciaCentimetros <= 0 || distanciaCentimetros > 80) {
-    digitalWrite(pinoLedVerde, LOW);
+// Controla os 3 LEDs visuais:
+// Verde: > 45 cm (livre / afastado)
+// Amarelo: 18 a 45 cm (atenção)
+// Vermelho: < 18 cm (muito perto / parada)
+void controlarLeds(float dist) {
+  if (dist > 45.0) {
+    digitalWrite(pinoLedVerde, HIGH);
     digitalWrite(pinoLedAmarelo, LOW);
     digitalWrite(pinoLedVermelho, LOW);
-    return;
+  } else if (dist >= 18.0) {
+    digitalWrite(pinoLedVerde, LOW);
+    digitalWrite(pinoLedAmarelo, HIGH);
+    digitalWrite(pinoLedVermelho, LOW);
+  } else {
+    digitalWrite(pinoLedVerde, LOW);
+    digitalWrite(pinoLedAmarelo, LOW);
+    digitalWrite(pinoLedVermelho, HIGH);
   }
-  digitalWrite(pinoLedVerde, distanciaCentimetros > 50 ? HIGH : LOW);
-  digitalWrite(pinoLedAmarelo, (distanciaCentimetros >= 20 && distanciaCentimetros <= 50) ? HIGH : LOW);
-  digitalWrite(pinoLedVermelho, (distanciaCentimetros > 0 && distanciaCentimetros < 20) ? HIGH : LOW);
 }
 
-// Controla os bipes do alarme sonoro para bancada (Escala máx 80 cm)
-void controlarBuzzer(float distancia) {
-  // Acima de 80 cm ou leitura inválida: silêncio absoluto
-  if (distancia <= 0 || distancia > 80) {
+// Controla os bipes do alarme sonoro
+void controlarBuzzer(float dist) {
+  // Desaproximou (> 80 cm): silêncio total
+  if (dist > 80.0) {
     desligarBuzzer();
     return;
   }
 
-  // Intervalos de bipe conforme a zona de aproximação
   unsigned long intervaloTotal;
   int frequenciaTom;
 
-  if (distancia < 8) {
-    intervaloTotal = 90;  // Perigo iminente (< 8 cm): bipe contínuo / ultra rápido
+  if (dist < 8.0) {
+    intervaloTotal = 80;  // Crítico / emergência: bipe contínuo
     frequenciaTom = 2400;
-  } else if (distancia < 20) {
-    intervaloTotal = 200; // Muito perto (8 a 20 cm): bipes rápidos
+  } else if (dist < 18.0) {
+    intervaloTotal = 180; // Muito perto: bipes rápidos
     frequenciaTom = 2200;
-  } else if (distancia <= 50) {
-    intervaloTotal = 450; // Atenção (20 a 50 cm): bipes moderados
+  } else if (dist <= 45.0) {
+    intervaloTotal = 400; // Atenção: bipes médios
     frequenciaTom = 1900;
   } else {
-    intervaloTotal = 850; // Longe (50 a 80 cm): bipes lentos
+    intervaloTotal = 800; // Longe (45 a 80 cm): bipes lentos
     frequenciaTom = 1600;
   }
 
-  // O bipe fica ligado por 50 milissegundos dentro de cada ciclo
   unsigned long tempoNoCiclo = millis() % intervaloTotal;
-  if (tempoNoCiclo < 50) {
+  if (tempoNoCiclo < 45) {
     ligarBuzzer(frequenciaTom);
   } else {
     desligarBuzzer();
   }
 }
 
-// Processa comandos remotos recebidos via Serial da tela Web ou Raspberry Pi
+// Processa comandos remotos recebidos via Serial
 void processarComandosRemotos() {
   if (Serial.available() > 0) {
     String comando = Serial.readStringUntil('\n');
@@ -145,27 +150,21 @@ void processarComandosRemotos() {
 }
 
 void loop() {
-  float distanciaLida = medirDistancia();
+  distanciaAtual = medirDistancia();
 
-  // Se a leitura for válida dentro de 80 cm, atualiza o valor estável
-  if (distanciaLida > 0 && distanciaLida <= 80.0) {
-    ultimaDistanciaValida = distanciaLida;
-  }
-
-  controlarLeds(distanciaLida > 0 ? distanciaLida : ultimaDistanciaValida);
-  controlarBuzzer(distanciaLida);
+  controlarLeds(distanciaAtual);
+  controlarBuzzer(distanciaAtual);
   processarComandosRemotos();
 
   // Envia JSON pela porta serial a cada 200 milissegundos
   unsigned long agora = millis();
   if (agora - tempoUltimoEnvioSerial >= 200) {
     tempoUltimoEnvioSerial = agora;
-    if (distanciaLida > 0 && distanciaLida <= 80.0) {
-      Serial.print(F("{\"distancia_cm\":"));
-      Serial.print(distanciaLida, 1);
-      Serial.println(F("}"));
-    }
+    float distEnvio = (distanciaAtual > 80.0) ? 80.0 : distanciaAtual;
+    Serial.print(F("{\"distancia_cm\":"));
+    Serial.print(distEnvio, 1);
+    Serial.println(F("}"));
   }
 
-  delay(20);
+  delay(25);
 }

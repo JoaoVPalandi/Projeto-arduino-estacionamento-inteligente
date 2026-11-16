@@ -4,12 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Estacionamento Inteligente • Vaga 01 | SENAI</title>
+  <!-- Carrega a folha de estilo estática entregue pelo FastAPI (/static) -->
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 
   <div class="container">
-    <!-- Topo -->
+    <!-- ==================================================================== -->
+    <!-- CABEÇALHO DO PAINEL                                                  -->
+    <!-- ==================================================================== -->
     <header class="top-header">
       <div>
         <span class="badge-senai">PROJETO INTEGRADOR IoT • SENAI</span>
@@ -17,20 +20,27 @@
         <p class="subtitulo">Sistema de auxílio para estacionar com sensor de distância e aviso sonoro (Escala Máx: 80 cm)</p>
       </div>
       <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+        <!-- Link para a documentação interativa automática do backend (Swagger) -->
         <a href="/docs" target="_blank" class="btn btn-cinza" style="text-decoration: none; padding: 8px 12px; font-size: 0.85rem;">📘 Swagger (/docs)</a>
+        <!-- Botão para ativar os bipes no navegador via Web Audio API -->
         <button id="btnAudio" class="btn btn-audio">🔇 Som de Bipes: <strong>Desligado</strong></button>
       </div>
     </header>
 
-    <!-- Cards Principais (Slide 08) -->
+    <!-- ==================================================================== -->
+    <!-- CARDS PRINCIPAIS: Dados em Tempo Real vindos de /api/vaga/status    -->
+    <!-- ==================================================================== -->
     <div class="grid-principal">
+      <!-- Card Central: Distância em centímetros e barra de proximidade -->
       <div class="card card-destaque">
         <span class="label-card">Distância até o obstáculo</span>
         <div class="caixa-distancia">
+          <!-- O JavaScript atualiza este número dinamicamente -->
           <span id="distanciaValor" class="numero-grande">35</span>
           <span class="unidade">cm</span>
         </div>
         <div id="distanciaNivel" class="texto-nivel">Nível de atenção</div>
+        <!-- Barra de aproximação que enche conforme o obstáculo se aproxima -->
         <div class="barra-fundo"><div id="barraPreenchimento" class="barra-cor"></div></div>
         <div class="barra-legendas">
           <span>&lt; 20 cm (Perto)</span>
@@ -39,6 +49,7 @@
         </div>
       </div>
 
+      <!-- Coluna Lateral: Status do Sensor, Tipo de Alerta e LEDs Virtuais -->
       <div class="coluna-cards">
         <div class="card card-pequeno">
           <div><h3>Sensor</h3><div id="sensorStatus" class="valor-card" style="color: #10b981;">Ativo</div></div>
@@ -48,6 +59,7 @@
           <div><h3>Alerta</h3><div id="alertaTexto" class="valor-card">Bipes moderados</div></div>
           <div class="icone">🔊</div>
         </div>
+        <!-- LEDs virtuais que espelham exatamente os LEDs físicos do Arduino -->
         <div class="card card-pequeno">
           <div>
             <h3>LEDs do Circuito</h3>
@@ -62,14 +74,18 @@
       </div>
     </div>
 
-    <!-- Simulação do Carro na Vaga -->
+    <!-- ==================================================================== -->
+    <!-- SIMULAÇÃO VISUAL: Carrinho animado e controles de teste de bancada   -->
+    <!-- ==================================================================== -->
     <div class="card card-vaga">
       <h2>Simulação do Carro Estacionando</h2>
       <div class="pista-vaga">
+        <!-- O CSS e o JavaScript alteram a propriedade 'left' deste elemento -->
         <div id="carroVirtual" class="carro">🚗 CARRO</div>
         <div class="parede-obstaculo"></div>
       </div>
 
+      <!-- Painel de testes manuais (envia requisições POST para a API) -->
       <div class="painel-testes">
         <label><strong>Testar Distância:</strong></label>
         <input type="range" id="sliderDistancia" min="5" max="80" value="35">
@@ -81,7 +97,9 @@
       </div>
     </div>
 
-    <!-- Comandos Remotos aos Atuadores -->
+    <!-- ==================================================================== -->
+    <!-- ATUADORES REMOTOS: Envia comando via POST /api/atuadores/comando     -->
+    <!-- ==================================================================== -->
     <div class="card card-vaga">
       <h2>Comando Remoto ao Atuador Sonoro (IoT)</h2>
       <div class="painel-testes" style="border: none; margin-top: 6px; padding-top: 0;">
@@ -90,7 +108,9 @@
       </div>
     </div>
 
-    <!-- Histórico de Leituras (Slide 08) -->
+    <!-- ==================================================================== -->
+    <!-- HISTÓRICO: Tabela montada a partir de GET /api/leituras/historico    -->
+    <!-- ==================================================================== -->
     <div class="card">
       <h2>Histórico</h2>
       <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 12px;">Leituras anteriores consultadas no banco de dados SQLite</p>
@@ -104,12 +124,14 @@
       </table>
     </div>
 
+    <!-- Rodapé informativo -->
     <footer class="rodape">
       <p><strong>Projeto Integrador • Internet das Coisas (IoT)</strong> — SENAI "Conde José Vicente de Azevedo"</p>
       <p>Integrantes: <strong>João Pradela</strong>, <strong>João Palandi</strong> e <strong>Pedro Cesar</strong></p>
     </footer>
   </div>
 
+  <!-- Carrega a lógica JavaScript que gerencia as requisições assíncronas (Fetch API) -->
   <script src="/static/script.js"></script>
 </body>
 </html>
